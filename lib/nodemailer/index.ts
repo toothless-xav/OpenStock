@@ -18,14 +18,20 @@ export const transporter = nodemailer.createTransport({
     maxMessages: 3,
 })
 
-// Verify connection on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Nodemailer transporter verification failed:', error);
-    } else {
-        console.log('✅ Nodemailer transporter is ready to send emails');
-    }
-});
+// Verify connection on startup only when email is intentionally enabled.
+// This prevents local/dev/build runs from failing or spamming Gmail auth errors
+// when OpenStock is being used as a charting/research dashboard first.
+if (process.env.DISABLE_EMAIL !== 'true' && process.env.NODEMAILER_EMAIL && process.env.NODEMAILER_PASSWORD) {
+    transporter.verify((error, success) => {
+        if (error) {
+            console.error('❌ Nodemailer transporter verification failed:', error);
+        } else {
+            console.log('✅ Nodemailer transporter is ready to send emails');
+        }
+    });
+} else {
+    console.warn('⚠️ Email verification skipped. Set DISABLE_EMAIL=false and SMTP credentials to enable email.');
+}
 
 export const sendWelcomeEmail = async ({ email, name, intro }: WelcomeEmailData) => {
     try {
